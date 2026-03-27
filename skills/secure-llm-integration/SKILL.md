@@ -1,9 +1,6 @@
 ---
 name: secure-llm-integration
-description: >
-  Add PromptGuard security to any LLM-powered application. Use when building new AI features,
-  integrating LLM SDKs, or securing existing unprotected LLM calls. Supports Python, Node.js,
-  and TypeScript projects using OpenAI, Anthropic, Google, Cohere, or AWS Bedrock.
+description: "Add PromptGuard security to any LLM-powered application. Use when building new AI features, integrating LLM SDKs, or securing existing unprotected LLM calls. Supports Python, Node.js, and TypeScript projects using OpenAI, Anthropic, Google, Cohere, or AWS Bedrock."
 ---
 
 # Secure LLM Integration
