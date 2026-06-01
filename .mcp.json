@@ -2,10 +2,7 @@
   "mcpServers": {
     "promptguard": {
       "command": "promptguard",
-      "args": ["mcp", "-t", "stdio"],
-      "env": {
-        "PROMPTGUARD_API_KEY": ""
-      }
+      "args": ["mcp", "-t", "stdio"]
     }
   }
 }

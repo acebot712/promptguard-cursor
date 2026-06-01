@@ -1,8 +1,10 @@
-# Contributing to PromptGuard Cursor Plugin
+# Contributing to the PromptGuard Plugin
 
 ## Overview
 
-This repository is a Cursor plugin -- a collection of static configuration files that Cursor loads to provide PromptGuard capabilities. There is no build step, no compiled code, and no test suite.
+This repository is a multi-agent plugin -- a collection of static configuration files that AI coding agents (Cursor, Claude Code, Codex, Copilot, Gemini CLI, Windsurf, VSCode, and any MCP-compatible client) load to provide PromptGuard capabilities. There is no build step, no compiled code, and no test suite.
+
+Each agent reads a different manifest: `.cursor-plugin/plugin.json` (Cursor), `.claude-plugin/plugin.json` (Claude Code), and `.codex-plugin/plugin.json` (Codex). Keep them in sync when changing shared metadata (name, version, description).
 
 ## Prerequisites
 
@@ -16,7 +18,11 @@ This repository is a Cursor plugin -- a collection of static configuration files
 
 ```
 .cursor-plugin/
-  plugin.json               # Plugin manifest (name, version, description, logo)
+  plugin.json               # Cursor manifest (name, version, description, logo)
+.claude-plugin/
+  plugin.json               # Claude Code manifest (adds skills + mcpServers wiring)
+.codex-plugin/
+  plugin.json               # Codex manifest (adds skills + mcpServers + interface)
 
 rules/
   secure-llm-usage.mdc      # Always-on rule: guides the agent to use PromptGuard
@@ -63,8 +69,8 @@ Testing is manual. There is no automated test suite for Cursor plugins.
 
 **To test locally:**
 
-1. Clone or symlink this repo into your Cursor plugins directory, or open a project that references it
-2. Restart Cursor to pick up changes
+1. Install the plugin into the agent you are testing (e.g. clone/symlink into your Cursor plugins directory, run `claude --plugin-dir .` for Claude Code, or register it in your Codex marketplace -- see the README's per-agent setup)
+2. Restart the agent to pick up changes
 3. Verify each component:
 
 | Component | How to verify |
@@ -72,12 +78,12 @@ Testing is manual. There is no automated test suite for Cursor plugins.
 | **Rules** | Open a file with LLM imports (e.g., `import openai`). The agent should suggest PromptGuard when writing LLM code. |
 | **Skills** | Ask the agent: "Add PromptGuard to this project". It should follow the skill playbook. |
 | **Commands** | Type `/promptguard-scan` or `/promptguard-secure` in the agent chat. |
-| **MCP tools** | Open MCP panel in Cursor settings. Verify `promptguard` server is listed and tools appear (scan_text, redact, etc.). |
+| **MCP tools** | Open the MCP panel in your agent's settings. Verify the `promptguard` server is listed and tools appear (`promptguard_scan_text`, `promptguard_redact`, etc.). |
 | **Agents** | Select the "LLM Security Reviewer" agent and ask it to review code. |
 
 ### MCP Server Testing
 
-The MCP server is provided by the PromptGuard CLI, not by this plugin. The plugin only configures Cursor to use it via `mcp.json`. To test:
+The MCP server is provided by the PromptGuard CLI, not by this plugin. The plugin only configures the agent to use it via `mcp.json` / `.mcp.json` (and the `mcpServers` key in the Claude Code and Codex manifests). To test:
 
 ```bash
 promptguard mcp -t stdio        # Verify CLI MCP server starts
@@ -90,23 +96,23 @@ There is no CI pipeline. The repository has Dependabot configured for GitHub Act
 
 ## Publishing
 
-Changes are published by pushing to the `main` branch. Cursor pulls plugin updates from the repository directly. There is no build, packaging, or registry publishing step.
+Changes are published by pushing to the `main` branch. Agents pull plugin updates from the repository directly. There is no build, packaging, or registry publishing step.
 
-To bump the plugin version, update `version` in `.cursor-plugin/plugin.json`.
+To bump the plugin version, update `version` in all three manifests (`.cursor-plugin/plugin.json`, `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`) so they stay in sync.
 
 ## PR Checklist
 
-- [ ] `.cursor-plugin/plugin.json` is valid JSON
-- [ ] `mcp.json` is valid JSON
+- [ ] All three manifests are valid JSON and in sync: `.cursor-plugin/plugin.json`, `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`
+- [ ] `.mcp.json` and `mcp.json` are valid JSON
 - [ ] Rules, skills, commands, and agents render correctly in markdown
-- [ ] Manually tested in Cursor
+- [ ] Manually tested in Cursor **and** Claude Code **and** Codex (at minimum the MCP server connects and one skill/command runs in each)
 - [ ] PR description explains the change
 
 ## Reporting Issues
 
 Open an issue at https://github.com/acebot712/promptguard-plugin/issues with:
 
-- Cursor version
+- Agent and version (e.g. Cursor, Claude Code, Codex)
 - PromptGuard CLI version (`promptguard --version`)
 - What you expected vs. what happened
 - Screenshots if applicable

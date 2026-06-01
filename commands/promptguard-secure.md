@@ -5,6 +5,13 @@ description: Add PromptGuard security to the current project. Installs the SDK, 
 
 # Add PromptGuard Security
 
+> **This command is the "do it now" path** — it applies the recommended
+> auto-instrumentation integration directly. To compare integration methods
+> (auto-instrumentation vs. Guard API vs. HTTP proxy) or for framework-specific
+> guidance, defer to the [secure-llm-integration skill](../skills/secure-llm-integration/SKILL.md),
+> which owns method selection and the detailed reference patterns. Keep this
+> command thin; put new method-selection detail in the skill to prevent drift.
+
 Add PromptGuard to this project to protect all LLM calls from prompt injection, PII leakage, and data exfiltration. Follow each phase in order.
 
 ## Phase 1: Assess the project
@@ -34,7 +41,7 @@ Run:
 pip install promptguard-sdk
 ```
 
-Add `promptguard-sdk>=1.5.0` to `requirements.txt` (or equivalent in `pyproject.toml`).
+Add `promptguard-sdk` to `requirements.txt` (or equivalent in `pyproject.toml`) with a version floor for reproducible builds, e.g. `promptguard-sdk>=1.8`. A security dependency should be pinned/floored and bumped deliberately after reviewing each release, not left unpinned.
 
 ### Node.js / TypeScript
 
@@ -90,14 +97,14 @@ For Lambda, Cloud Functions, or similar: add the init call at module scope (outs
 
 2. Add the PromptGuard API key placeholder:
 ```
-PROMPTGUARD_API_KEY=pg_your_api_key_here
+PROMPTGUARD_API_KEY=pg_live_xxx
 ```
 
 3. Verify `.env` (and `.env.local`, `.env.production`, etc.) is listed in `.gitignore`. If not, add it.
 
 4. Inform the user:
 > Get your API key from https://app.promptguard.co/settings/api-keys
-> Replace `pg_your_api_key_here` with your actual key.
+> Replace `pg_live_xxx` with your actual key.
 
 ## Phase 5: Verify
 

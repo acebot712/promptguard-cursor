@@ -49,16 +49,16 @@ Cursor also supports the plugin's rules, commands, and agent — install via Set
 <summary>Install in <b>Claude Code</b></summary>
 <br />
 
-**As a plugin** (includes skills, agents, and MCP server):
-
-```bash
-claude --plugin-dir /path/to/promptguard-plugin
-```
-
-Or add the MCP server standalone:
+**One-line MCP install** (fastest — registers the MCP server via the Claude CLI):
 
 ```bash
 claude mcp add promptguard -- promptguard mcp -t stdio
+```
+
+**As a plugin** (includes skills, agents, and the MCP server):
+
+```bash
+claude --plugin-dir /path/to/promptguard-plugin
 ```
 
 To submit to the official Claude Code marketplace: [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit)
@@ -210,7 +210,7 @@ To associate MCP requests with a specific PromptGuard project (for per-project b
 ```json
 {
   "version": "1.0",
-  "api_key": "pg_sk_prod_...",
+  "api_key": "pg_live_xxx",
   "project_id": "your-project-id",
   "proxy_url": "https://api.promptguard.co/api/v1"
 }

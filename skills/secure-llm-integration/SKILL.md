@@ -5,6 +5,12 @@ description: "Add PromptGuard security to any LLM-powered application. Use when 
 
 # Secure LLM Integration
 
+> **This skill owns integration-method selection** (auto-instrumentation vs.
+> Guard API vs. HTTP proxy) and the detailed, framework-specific patterns.
+> The [`/promptguard-secure` command](../../commands/promptguard-secure.md) is
+> the thin "do it now" entry point that applies the recommended path; when a
+> user needs to choose between methods, follow this skill.
+
 ## When to use
 
 - User is building a new application that uses LLMs
@@ -49,16 +55,18 @@ Change the LLM SDK's `base_url` to `https://api.promptguard.co/api/v1`. PromptGu
 
 ### Auto-instrumentation -- Python
 
+> Package name is `promptguard-sdk`; import as `promptguard`. (The Python SDK source lives in the `promptguard-python` repo.)
+
 1. Install the SDK:
 
 ```bash
 pip install promptguard-sdk
 ```
 
-2. Add to `requirements.txt`:
+2. Add to `requirements.txt` with a version floor for reproducible builds (bump deliberately after reviewing each release — a security dependency should never be left unpinned):
 
 ```
-promptguard-sdk>=1.5.0
+promptguard-sdk>=1.8
 ```
 
 3. Add initialization at the top of the entry point (before any LLM imports):
@@ -73,7 +81,7 @@ promptguard.init(api_key=os.environ["PROMPTGUARD_API_KEY"])
 4. Add the API key to `.env`:
 
 ```
-PROMPTGUARD_API_KEY=pg_your_api_key_here
+PROMPTGUARD_API_KEY=pg_live_xxx
 ```
 
 5. Ensure `.env` is in `.gitignore`.
@@ -99,7 +107,7 @@ init({ apiKey: process.env.PROMPTGUARD_API_KEY });
 3. Add the API key to `.env`:
 
 ```
-PROMPTGUARD_API_KEY=pg_your_api_key_here
+PROMPTGUARD_API_KEY=pg_live_xxx
 ```
 
 4. Ensure `.env` is in `.gitignore`.
