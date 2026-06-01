@@ -5,11 +5,11 @@
 All requests must include the `X-API-Key` header:
 
 ```
-X-API-Key: pg_live_xxxxxxxxxxxxxxxxxxxx
+X-API-Key: pg_live_xxx
 ```
 
 Keys are created in the [dashboard](https://app.promptguard.co/settings/api-keys).
-Test keys start with `pg_test_`, production keys with `pg_live_`.
+All keys start with `pg_live_`.
 
 ## Threat types
 

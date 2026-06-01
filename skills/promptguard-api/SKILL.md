@@ -79,7 +79,7 @@ Full guard endpoint with OpenAI-style message array. Preferred for framework int
     { "role": "user", "content": "Tell me about AI safety" }
   ],
   "direction": "input | output",
-  "model": "gpt-5-nano",
+  "model": "your-model",
   "context": {
     "framework": "langchain",
     "session_id": "sess_123",
