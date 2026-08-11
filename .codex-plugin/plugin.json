@@ -1,6 +1,6 @@
 {
   "name": "promptguard",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "LLM security for AI coding agents -- protect applications from prompt injection, PII leakage, and data exfiltration",
   "author": {
     "name": "PromptGuard",
@@ -28,7 +28,9 @@
     "longDescription": "Protect applications from prompt injection, PII leakage, and data exfiltration. Provides MCP tools for scanning text, redacting PII, and reviewing code for LLM security vulnerabilities.",
     "developerName": "PromptGuard",
     "category": "Security",
-    "capabilities": ["Read"],
+    "capabilities": [
+      "Read"
+    ],
     "websiteURL": "https://promptguard.co",
     "privacyPolicyURL": "https://promptguard.co/privacy",
     "termsOfServiceURL": "https://promptguard.co/terms"
