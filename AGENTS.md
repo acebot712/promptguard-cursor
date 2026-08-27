@@ -39,6 +39,21 @@ The plugin connects to the PromptGuard CLI via MCP (`promptguard mcp -t stdio`).
 
 ## Development
 
+**Enable the tracked git hooks once per clone.** Git will not turn on a repo's
+own hooks for you:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+`.githooks/pre-push` runs two fast checks: a gitleaks scan of the commits you
+are pushing, and the manifest validation that mirrors CI's `validate` job. The
+scan is scoped to the pushed range on purpose — this repo is public, so a
+credential on `main` is world-readable at once, while a scan of the whole tree
+or of history would fail on its first run and teach everyone `--no-verify`. A
+legitimate secret-shaped fixture belongs in `.gitleaks.toml`, not behind a
+bypass.
+
 No build step. To test changes:
 
 1. Install this repo into the target agent (see the README's per-agent setup)

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# Tracked pre-push gate. Enable it once per clone:
+#
+#   git config core.hooksPath .githooks
+#
+# Two things, both fast: a secret scan of the commits being pushed, and the
+# manifest validation that mirrors .github/workflows/ci.yml's validate job.
+# Both used to live in an untracked .git/hooks/pre-push on one laptop, which is
+# not a gate, it is a personal habit.
+set -euo pipefail
+
+# ~/.zshrc is zsh syntax and breaks when sourced from bash -- name the toolchain
+# paths it would have added instead.
+export PATH="$HOME/.cargo/bin:$HOME/.nvm/versions/node/v24.18.0/bin:$HOME/Library/pnpm:$HOME/Library/pnpm/bin:/opt/homebrew/opt/python@3.13/bin:/opt/homebrew/opt/libpq/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+cd "$(git rev-parse --show-toplevel)"
+
+
+command -v gitleaks >/dev/null 2>&1 || {
+  echo "gitleaks not installed; skipping the local secret scan." >&2
+  echo "  brew install gitleaks" >&2
+  exit 0
+}
+
+# Set by pre-commit at the pre-push stage. Falling back to "everything not yet
+# on a remote" covers a direct hook invocation and a brand-new branch alike.
+from_ref="${PRE_COMMIT_FROM_REF:-}"
+to_ref="${PRE_COMMIT_TO_REF:-}"
+if [ -n "$from_ref" ] && ! git rev-parse --quiet --verify "$from_ref" >/dev/null 2>&1; then
+  from_ref=""
+fi
+
+if [ -n "$from_ref" ] && [ -n "$to_ref" ]; then
+  log_opts="$from_ref..$to_ref"
+else
+  log_opts="HEAD --not --remotes"
+fi
+
+if ! gitleaks detect --source . --log-opts "$log_opts" --no-banner --redact; then
+  cat >&2 <<'MSG'
+
+A secret was found in the commits you are pushing.
+
+This repository is public. A credential that lands on the default branch is
+world-readable immediately and must be rotated, not just reverted.
+
+If this is a test fixture, do not bypass -- give it an obviously-fake shape, or
+add its path to .gitleaks.toml so the exemption is written down and reviewable.
+
+Bypass (last resort): git push --no-verify
+MSG
+  exit 1
+fi
+
+echo "pre-push: validating plugin manifests..."
+start=$(date +%s)
+
+files=()
+while IFS= read -r f; do files+=("$f"); done < <(git ls-files '*.json')
+if [ "${#files[@]}" -gt 0 ]; then
+  for f in "${files[@]}"; do
+    python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$f"
+  done
+fi
+
+test -f mcp.json
+test -f .mcp.json
+test -f .cursor-plugin/plugin.json
+test -f .claude-plugin/plugin.json
+test -f .codex-plugin/plugin.json
+test -f rules/secure-llm-usage.mdc
+test -f rules/llm-security-review.mdc
+test -f skills/secure-llm-integration/SKILL.md
+test -f skills/promptguard-api/SKILL.md
+test -f commands/promptguard-scan.md
+test -f commands/promptguard-secure.md
+test -f agents/llm-security-reviewer.md
+test -f AGENTS.md
+
+v_cursor=$(python3 -c "import json; print(json.load(open('.cursor-plugin/plugin.json'))['version'])")
+v_claude=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+v_codex=$(python3 -c "import json; print(json.load(open('.codex-plugin/plugin.json'))['version'])")
+if [ "$v_cursor" != "$v_claude" ] || [ "$v_cursor" != "$v_codex" ]; then
+  echo "pre-push: plugin manifest versions are out of sync (cursor=$v_cursor claude=$v_claude codex=$v_codex)." >&2
+  exit 1
+fi
+
+diff -u mcp.json .mcp.json
+
+elapsed=$(( $(date +%s) - start ))
+echo "pre-push gate passed in ${elapsed}s -- pushing."
