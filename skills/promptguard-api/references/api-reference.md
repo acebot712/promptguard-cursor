@@ -132,17 +132,41 @@ Switzerland (`nhs_number`, `uk_nino`, `es_nif`, `it_fiscal_code`, `au_tfn`,
 and others).
 
 > Labels come from `PIIDetector` in the platform's
-> `backend/api/shared/security/detectors.py`. Note these are **response**
-> labels: treat `piiFound` as the reliable surface, and do not promise a user
-> that a `pii_types` request filter narrows what gets redacted.
+> `backend/api/shared/security/detectors.py`, plus `api_key`, which is not a
+> PII entity — it comes from a separate detector — but is accepted in
+> `pii_types` and reported in `piiFound` alongside the rest. Every label named
+> above was verified against `PIIDetector.supported_type_names()` on
+> 2026-09-01; the list is a common-cases sample, not the full 47.
+>
+> `pii_types` **does** narrow what gets redacted: name the types you want and
+> only those are replaced, an unknown one is a 400 rather than a silent
+> ignore, and `api_key` is stripped by default unless you pass a list that
+> leaves it out. An earlier revision of this file said the opposite. That was
+> true once — the handler accepted the field and dropped it — and it is not
+> true now.
 
 ## Rate limits
 
-| Tier | Requests/month | Rate limit |
+| Plan | Requests/month | Rate limit |
 |------|---------------|------------|
-| Free | 10,000 | 10 req/s |
-| Pro | 100,000 | 50 req/s |
-| Enterprise | Custom | Custom |
+| Free | 20,000 | 60 req/min |
+| Pro | 100,000 | 300 req/min |
+| Scale | 500,000 | 600 req/min |
+| Enterprise | Uncapped | 1,000 req/min |
+
+Rate limits are **per minute**, not per second. Responses carry
+`X-RateLimit-Limit` (the plan's per-minute ceiling) and `X-RateLimit-Reset`
+(unix timestamp of the next window) — read those for backoff rather than
+hard-coding the table.
+
+> Monthly limits are `PLAN_CONFIG` in the platform's
+> `backend/api/shared/billing/constants.py`; rate limits are
+> `PLAN_RATE_LIMITS` in `backend/api/shared/middleware/rate_limit_headers.py`.
+> Verified against both on 2026-09-01. The previous revision said Free was
+> 10,000/month at "10 req/s" and Pro "50 req/s", omitted Scale entirely, and
+> gave the unit as seconds — so every rate figure was overstated tenfold.
+> Enforcement is at the Cloud Armor / load-balancer layer; these values are
+> what the headers advertise.
 
 ## Proxy mode
 
