@@ -13,10 +13,14 @@ All keys start with `pg_live_`.
 
 ## Threat types
 
-The `threatType` field in scan responses carries one of these exact values.
+The `threatType` field in scan responses carries one of the values below.
 Match on them literally — they are `snake_case`, and several read differently
 from the plain-English name of the attack (`prompt_injection`, not `injection`;
 `pii_leak`, not `pii`).
+
+Every value the platform can emit is listed here. Not every one can come back
+from a single `/scan` call: the multi-agent group is opt-in and surfaces
+through correlated events, as noted under that table.
 
 | Value | Description |
 |-------|-------------|
@@ -37,18 +41,79 @@ from the plain-English name of the attack (`prompt_injection`, not `injection`;
 | `off_topic` | Outside the configured topic scope |
 | `gibberish` | Non-language input |
 | `language_violation` | Disallowed language |
+| `multi_turn_escalation` | Intent drift across turns — no single message carries the payload, the trajectory does |
 
-A further set covers agent-directed attacks (content injection, semantic
-manipulation, memory and RAG poisoning, multi-agent dynamics) — for example
-`rag_poisoning`, `memory_poisoning`, `sub_agent_spawning`, `html_obfuscation`,
-`image_stego`. Several of those are opt-in and surface through correlated
-events rather than a single scan.
+### Agent-directed threats
+
+These cover the AI Agent Traps framework (Franklin et al., Google DeepMind
+2025): attacks that reach an autonomous agent through its environment rather
+than through a user's message. They are grouped by what the attack targets.
+
+**Perception — content injection**
+
+| Value | Description |
+|-------|-------------|
+| `html_obfuscation` | Hidden instruction in web content |
+| `syntactic_masking` | Hidden instruction in Markdown or LaTeX syntax |
+| `image_stego` | Steganographic payload in an image |
+| `image_adversarial` | Adversarial image crafted to jailbreak a vision model |
+| `audio_stego` | Steganographic payload in audio |
+| `font_injection` | Malicious font or glyph mapping |
+| `dynamic_cloaking` | Content served differently to bots than to people |
+
+**Reasoning — semantic manipulation**
+
+| Value | Description |
+|-------|-------------|
+| `framing_bias` | Biased framing or contextual priming |
+| `critic_evasion` | Content shaped to slip past an oversight or critic step |
+| `persona_hyperstition` | Persona drift induced by sustained roleplay |
+
+**Memory and learning — cognitive state**
+
+| Value | Description |
+|-------|-------------|
+| `rag_poisoning` | Poisoned document in a retrieval corpus |
+| `memory_poisoning` | Poisoned entry in an agent's long-term memory |
+| `few_shot_poisoning` | Poisoned in-context or few-shot example |
+
+**Action — behavioural control**
+
+| Value | Description |
+|-------|-------------|
+| `sub_agent_spawning` | Unauthorised spawning of a sub-agent |
+
+The other behavioural sub-vectors are already covered above:
+`prompt_injection` for embedded jailbreaks, `data_exfiltration` for exfil.
+
+**Multi-agent dynamics — systemic**
+
+| Value | Description |
+|-------|-------------|
+| `compositional_fragment` | Individually benign fragments that compose into an attack |
+| `sybil_attack` | Pseudonymous identities used to manufacture agreement |
+| `systemic_cascade` | Cascading failure or congestion across agents |
+| `tacit_collusion` | Agents converging on collusive behaviour without explicit coordination |
+
+**These four are opt-in and are raised from `correlated_security_events`, not
+from single-call detection.** A single `/scan` response will not carry them, so
+do not write a check that waits for one.
+
+**Human overseer — human in the loop**
+
+| Value | Description |
+|-------|-------------|
+| `approval_fatigue` | Approval requests shaped to exhaust or exploit a human reviewer |
 
 > These values are the `ThreatType` enum in the platform's
-> `backend/api/shared/security/engine.py`. They are **not** published in
+> `backend/api/shared/security/engine.py` — all 37 of them, verified against
+> that enum on 2026-09-01. They are **not** published in
 > `openapi-developer.json`, which types `threatType` as a bare nullable string —
-> so there is nothing to generate them from, and this table is maintained by
-> hand. Verify against that enum before changing it. See `AGENTS.md`.
+> so there is nothing to generate them from, and these tables are maintained by
+> hand. Verify against that enum before changing them, and diff the whole set
+> rather than spot-checking: the previous revision listed 17 of 37, all correct
+> and none missing-by-mistake, because the block added in 2026-04 was summarised
+> in prose instead of tabulated. See `AGENTS.md`.
 
 ## PII entity types
 
@@ -67,17 +132,41 @@ Switzerland (`nhs_number`, `uk_nino`, `es_nif`, `it_fiscal_code`, `au_tfn`,
 and others).
 
 > Labels come from `PIIDetector` in the platform's
-> `backend/api/shared/security/detectors.py`. Note these are **response**
-> labels: treat `piiFound` as the reliable surface, and do not promise a user
-> that a `pii_types` request filter narrows what gets redacted.
+> `backend/api/shared/security/detectors.py`, plus `api_key`, which is not a
+> PII entity — it comes from a separate detector — but is accepted in
+> `pii_types` and reported in `piiFound` alongside the rest. Every label named
+> above was verified against `PIIDetector.supported_type_names()` on
+> 2026-09-01; the list is a common-cases sample, not the full 47.
+>
+> `pii_types` **does** narrow what gets redacted: name the types you want and
+> only those are replaced, an unknown one is a 400 rather than a silent
+> ignore, and `api_key` is stripped by default unless you pass a list that
+> leaves it out. An earlier revision of this file said the opposite. That was
+> true once — the handler accepted the field and dropped it — and it is not
+> true now.
 
 ## Rate limits
 
-| Tier | Requests/month | Rate limit |
+| Plan | Requests/month | Rate limit |
 |------|---------------|------------|
-| Free | 10,000 | 10 req/s |
-| Pro | 100,000 | 50 req/s |
-| Enterprise | Custom | Custom |
+| Free | 20,000 | 60 req/min |
+| Pro | 100,000 | 300 req/min |
+| Scale | 500,000 | 600 req/min |
+| Enterprise | Uncapped | 1,000 req/min |
+
+Rate limits are **per minute**, not per second. Responses carry
+`X-RateLimit-Limit` (the plan's per-minute ceiling) and `X-RateLimit-Reset`
+(unix timestamp of the next window) — read those for backoff rather than
+hard-coding the table.
+
+> Monthly limits are `PLAN_CONFIG` in the platform's
+> `backend/api/shared/billing/constants.py`; rate limits are
+> `PLAN_RATE_LIMITS` in `backend/api/shared/middleware/rate_limit_headers.py`.
+> Verified against both on 2026-09-01. The previous revision said Free was
+> 10,000/month at "10 req/s" and Pro "50 req/s", omitted Scale entirely, and
+> gave the unit as seconds — so every rate figure was overstated tenfold.
+> Enforcement is at the Cloud Armor / load-balancer layer; these values are
+> what the headers advertise.
 
 ## Proxy mode
 
